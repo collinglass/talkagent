@@ -1,31 +1,33 @@
 /*-------------------------------------------------------------------
 File: talkagent.c
+CSI 3131 Winter 2014
+Assignment 1
 
-Name:
-Student Number:
+Name: Collin Glass
+Student Number: 6006546
 
 Description: This is a communications agent designed to exchange
              with another agent text entered received via the
-	     standard input (typically attached to a terminal).
-	     Any data received from the remote agent is sent
-	     to the standard output.  The process is expected to
-	     have the communications channel with the 
-	     remote agent (another talkagent process) already setup 
-	     by its parent process.  The command line contains the
-	     file descriptors to the communications channel - the
-	     first giving the read end (infd) of the channel to 
-	     receive text from the remote agent, and the second
-	     (outfd) the write end of the channel to send text
-	     to the remote agent.  Note that the channel between
-	     agents can be any communications channel such as
-	     pipes or sockets.
-
-	     The program uses two threads, each responsible for
-	     a direction in the communications.  One thread reads
-	     from the standard input and writes to the comms 
-	     channel while the other reads from the comms channel
-	     and writes to the standard output.
--------------------------------------------------------------------*/
+       standard input (typically attached to a terminal).
+       Any data received from the remote agent is sent
+       to the standard output.  The process is expected to
+       have the communications channel with the 
+       remote agent (another talkagent process) already setup 
+       by its parent process.  The command line contains the
+       file descriptors to the communications channel - the
+       first giving the read end (infd) of the channel to 
+       receive text from the remote agent, and the second
+       (outfd) the write end of the channel to send text
+       to the remote agent.  Note that the channel between
+       agents can be any communications channel such as
+       pipes or sockets.
+       
+       The program uses two threads, each responsible for
+       a direction in the communications.  One thread reads
+       from the standard input and writes to the comms 
+       channel while the other reads from the comms channel
+       and writes to the standard output.
+ -------------------------------------------------------------------*/
 #include <stdio.h>
 #include <pthread.h>
 
@@ -40,39 +42,39 @@ Function: main
 
 Description: The main function processes the command line to get the
              comms channel file descriptors which it stores in an
-	     integer array.  It then calls the create_thread 
-	     function that will create and monitor the program
-	     threads.
-
-	     Assignment: You do not need to change this function.
--------------------------------------------------------------------*/
+       integer array.  It then calls the create_thread 
+       function that will create and monitor the program
+       threads.
+       
+       Assignment: You do not need to change this function.
+ -------------------------------------------------------------------*/
 int main(int argc, char *argv[])
 {
-   int fds[2];  /* fds[0] remote input, fds[1], remote output */
-   int retcd;
-
-   if(argc != 3)
-   {
-      printf("Usage: talkagent <infd> <outfd>\n");
-      retcd = 1;
-   }
-   else if(sscanf(argv[1],"%d",&fds[0]) != 1)
-   {
-      printf("Invalid <infd> %s\n",argv[1]);
-      retcd = 1;
-   }
-   else if(sscanf(argv[2],"%d",&fds[1]) != 1)
-   {
-      printf("Invalid <outfd> %s\n",argv[2]);
-      retcd = 1;
-   }
-   else 
-   {
-      if(createThreads(fds) == OK) retcd = 0;
-      else retcd = 1;
-   }
-   printf("All done! (%s)\n", getpid());
-   return(retcd);
+    int fds[2];  /* fds[0] remote input, fds[1], remote output */
+    int retcd;
+    
+    if(argc != 3)
+    {
+        printf("Usage: talkagent <infd> <outfd>\n");
+        retcd = 1;
+    }
+    else if(sscanf(argv[1],"%d",&fds[0]) != 1)
+    {
+        printf("Invalid <infd> %s\n",argv[1]);
+        retcd = 1;
+    }
+    else if(sscanf(argv[2],"%d",&fds[1]) != 1)
+    {
+        printf("Invalid <outfd> %s\n",argv[2]);
+        retcd = 1;
+    }
+    else 
+    {
+        if(createThreads(fds) == OK) retcd = 0;
+        else retcd = 1;
+    }
+    printf("All done! (%s)\n", getpid());
+    return(retcd);
 }
 
 /*-------------------------------------------------------------------
@@ -80,22 +82,59 @@ Function: createThreads
 
 Description: This function is responsible for creating two threads
              using the pthread library API. Both threads execute the
-	     talk function.  The difference is in the setup of the
-	     file descriptors passed to the thread which define the
-	     read and write fds. Once threads are created, the
-	     function waits until both threads have terminated
-	     before returning.
-	     
-	     Assignment: You need to complete this function.
--------------------------------------------------------------------*/
+       talk function.  The difference is in the setup of the
+       file descriptors passed to the thread which define the
+       read and write fds. Once threads are created, the
+       function waits until both threads have terminated
+       before returning.
+       
+       Assignment: You need to complete this function.
+ -------------------------------------------------------------------*/
 int createThreads(int fds[])
 {
-   int retcd = OK;  /* return code */
+    int retcd = OK;  /* return code */
+    
+    /* lets print a welcome message */
+    printf("Welcome to talk agent (%d)\n", getpid());
+    
+    pthread_t tid[2];
+    
+    int i;
+    
+    // We need to create the file descriptors for the threads first:
+    
+    int fd1[2];
+    int fd2[2];
 
-   /* lets print a welcome message */
-   printf("Welcome to talk agent (%d)\n", getpid());
+    fd1[0] = 0;       // Setup thread 1
+    fd1[1] = fds[1];
 
-   return(retcd);
+    fd2[0] = fds[0];  // Setup thread 2
+    fd2[1] = 1;
+    
+    // Creat thread 1 
+    int thread1 = pthread_create(&tid[0], NULL, talk, &fd1);
+    if (thread1 != 0) {
+    // Error handling
+        printf(stderr, "Failed to create thread.");
+        exit(-1);
+    }
+    
+    // Create thread 2
+    int thread2 = pthread_create(&tid[1], NULL, talk, &fd2);
+    if (thread2 != 0) {
+    // Error Handling
+        printf(stderr, "Failed to create thread.");
+        exit(-1);
+    }
+    
+    for (i = 0; i<2; i++) {
+        if (pthread_join(tid[i], NULL) !=0) {
+            printf(stderr, "pthread_join failed on thread " + i);
+        }
+    }
+    
+    return(retcd);
 }
 
 /*-------------------------------------------------------------------
@@ -104,42 +143,42 @@ Function: talk
 Description: This is the function executed by a thread for 
              communications in a single direction.  The paramter
              received points to an integer array that gives the
-	     read and write file descriptors.
-	     
-	     Assignment: You do not need to change this function.
-	                 Use as is.
--------------------------------------------------------------------*/
+        read and write file descriptors.
+
+        Assignment: You do not need to change this function.
+                    Use as is.
+ -------------------------------------------------------------------*/
 void *talk(void *fdPtr)
 {
-   int *fds = (int *) fdPtr;  /* cast parameter into an integer pointer */
-   int num;                   /* for storing number of characters read */
-   char buffer[BUFSIZ];       /* buffer for reading characters and 
-                                 building other output messages */
-  
-   while(1)  /* setup up loop */
-   {
-     num = read(fds[0],buffer,BUFSIZ);
-     if(num == -1) /* Error in the read */
-     {
-        sprintf(buffer,"Fatal read error on %d (%d)\n",fds[0],getpid());
-        write(fds[1],buffer,strlen(buffer));
-	perror(buffer);  /* this writes to the standard error */
-	break;  /* break out of loop */
-     }
-     else if(num == 0) /* link severed by the remote */
-     {
-	sprintf(buffer,"Link severed (%d)\n",getpid());
-        write(fds[1],buffer,strlen(buffer));
-	break;  /* break out of loop */
-     }
-     else if(strncmp("exit",buffer,strlen("exit")) == 0) 
-     {  /* request from local to terminate */
-	break;  /* break out of loop */
-     }
-     else write(fds[1],buffer,num); /* send the data received */
-   }
-   /* close channels */
-   close(fds[0]);
-   close(fds[1]); 
-   pthread_exit(0);  /*terminate the thread*/
-}
+    int *fds = (int *) fdPtr;  /* cast parameter into an integer pointer */
+    int num;                   /* for storing number of characters read */
+    char buffer[BUFSIZ];       /* buffer for reading characters and 
+                                building other output messages */
+    
+    while(1)  /* setup up loop */
+    {
+        num = read(fds[0],buffer,BUFSIZ);
+        if(num == -1) /* Error in the read */
+        {
+            sprintf(buffer,"Fatal read error on %d (%d)\n",fds[0],getpid());
+            write(fds[1],buffer,strlen(buffer));
+            perror(buffer);  /* this writes to the standard error */
+            break;  /* break out of loop */
+        }
+        else if(num == 0) /* link severed by the remote */
+        {
+            sprintf(buffer,"Link severed (%d)\n",getpid());
+            write(fds[1],buffer,strlen(buffer));
+            break;  /* break out of loop */
+        }
+        else if(strncmp("exit",buffer,strlen("exit")) == 0) 
+        {  /* request from local to terminate */
+            break;  /* break out of loop */
+        }
+        else write(fds[1],buffer,num); /* send the data received */
+    }
+    /* close channels */
+    close(fds[0]);
+    close(fds[1]); 
+    pthread_exit(0);  /*terminate the thread*/
+}/*end of talk*/
