@@ -67,14 +67,14 @@ Assignment: Complete this function to ensure proper calls to
  ---------------------------------------------------------------*/
 int main(int argc, char *argv[])
 {
-    int persBrfd;  /* read end of pipe */
-    int persAwfd;  /* write end of pipe */
+    int persBrfd;  // read end of pipe
+    int persAwfd;  // write end of pipe
     
     printf("Simulation starting\n");
     
-    persBrfd = doPersonB(); /* setup Person B and its pipe */
+    persBrfd = doPersonB(); // setup Person B and its pipe
     
-    /* Here we will create the 2 pipes that will be used by the talk agents. */
+    // Here we will create the 2 pipes that will be used by the talk agents.
     
     int pipefd1[2]; // File descriptors
     int pipefd2[2];
@@ -89,15 +89,13 @@ int main(int argc, char *argv[])
         exit(-1);
     }
     
-    /* Create talkagent for Person B*/
-    /* note that stdin connected to persB pipe */
+    // Create talkagent for Person B
     setupTalkAgentB(persBrfd, pipefd1, pipefd2);
     
-    /* Create talkagent for Person A*/
-    /* note that stdin connected to persB pipe */
+    // Create talkagent for Person A
     persAwfd = setupTalkAgentA(pipefd1, pipefd2);
     
-    /* Lets do person A now */
+    // Lets do person A now
     doPersonA(persAwfd);
     
     fprintf(stderr,"Simulation all done\n");
@@ -136,9 +134,9 @@ int doPersonB(void)
         exit(-1);
         
     } else if (pid == 0) { // CHILD
-        close(pipefd[0]); // Close the READING end of the pipe.
-        dup2(pipefd[1], 1); // Change the stdout to the write end of the pipe.
-        close(pipefd[1]); // Close the duplicate.
+        close(pipefd[0]); // Close read end of pipe
+        dup2(pipefd[1], 1); // Duplicate pipe to given end and
+        close(pipefd[1]); // Close original
        
         
         int i;
@@ -154,8 +152,8 @@ int doPersonB(void)
         exit(0);
         
     } else { // PARENT
-        close(pipefd[1]); // Close the WRITING end of the pipe.
-        return(pipefd[0]); // Return the READING end of the pipe.
+        close(pipefd[1]); // Close write end of pipe
+        return(pipefd[0]); // Return the read end of the pipe
     }
 }
 
@@ -184,28 +182,28 @@ void setupTalkAgentB(int persBrfd, int pipefd1[], int pipefd2[])
         
     } else if (pid == 0) { // CHILD
         
-        dup2(persBrfd, 0); // Change the source of input to persBrfd.
-        close(persBrfd); // Close duplicate. 
+        dup2(persBrfd, 0); // Duplicate the pipe to given end and
+        close(persBrfd); // close original 
         
-        char pipeFeed1[2]; // char array to represent pipefd1.
-        char pipeFeed2[2]; // char array to represent pipefd2.
+        char pipeFeed1[2]; // char array to represent pipefd1
+        char pipeFeed2[2]; // char array to represent pipefd2
         sprintf(pipeFeed1, "%d", pipefd1[1]);
         sprintf(pipeFeed2, "%d", pipefd2[0]);
         
-        close(pipefd1[0]); // Close the reading end of pipe 1. 
-        close(pipefd2[1]); // Close the writing end of pipe 2.
+        close(pipefd1[0]); // Close read end of pipe 1 
+        close(pipefd2[1]); // Close write end of pipe 2
         
 
-        /* Now we can execute talkagent */
+        // Now we can execute talkagent
         
         execlp("./talkagent", "./talkagent", pipeFeed2, pipeFeed1, NULL);
         exit(-1); // In case the execution fails.
-    } else { // This is for the parent process. 
+    } else { // PARENT 
         
         close(persBrfd); // We don't need persBrfd anymore. 
         
-        close(pipefd2[0]); // Close the READING end of pipefd2.
-        close(pipefd1[1]); // Close the WRITING end of pipefd1.
+        close(pipefd2[0]); // Close read end of pipefd2.
+        close(pipefd1[1]); // Close write end of pipefd1.
         
     }
         
@@ -248,33 +246,31 @@ int setupTalkAgentA(int pipefd1[], int pipefd2[])
         
     } else if (pid == 0) { // CHILD
         
-        dup2(pipefd[0], 0); // Change the input source to pipefd. 
-        close(pipefd[0]); // Close the duplicate. 
-        close(pipefd[1]); // Close the WRITING end of the pipe created. 
+        dup2(pipefd[0], 0); // Change the input source to pipefd 
+        close(pipefd[0]); // Close duplicate 
+        close(pipefd[1]); // Close write end of the pipe created 
         
-        char pipeFeed1[2]; // char array to represent pipefd1.
-        char pipeFeed2[2]; // char array to represent pipefd2.
+        char pipeFeed1[2]; // char array to represent pipefd1
+        char pipeFeed2[2]; // char array to represent pipefd2
         sprintf(pipeFeed1, "%d", pipefd1[0]);
         sprintf(pipeFeed2, "%d", pipefd2[1]);
         
         // Close unused ends
-        close(pipefd1[1]); // Close the WRITING end of pipe 1. 
-        close(pipefd2[0]); // Close the READING end of pipe 2.
+        close(pipefd1[1]); // Close write end of pipe 1
+        close(pipefd2[0]); // Close read end of pipe 2
 
-        /* Now we can execute talkagent */
+        // Now we can execute talkagent
         
         execlp("./talkagent", "./talkagent", pipeFeed1, pipeFeed2, NULL);
         exit(-1); // In case the execution fails.
     
-    } else { // This is for the parent process.
+    } else { // PARENT
         
-        close(pipefd[0]); // Close the READING end of pipefd.
-        close(pipefd1[0]); // Close the READING end of pipefd1.
-        // close(pipefd2[0]); // Close the READING end of pipefd2.
-        // close(pipefd1[1]); // Close the WRITING end of pipefd1.
-        close(pipefd2[1]); // Close the WRITING end of pipefd2.
+        close(pipefd[0]); // Close read end of pipefd
+        close(pipefd1[0]); // Close read end of pipefd1
+        close(pipefd2[1]); // Close write end of pipefd2
         
-        return(pipefd[1]); // Return the WRITING end of pipefd.
+        return(pipefd[1]); // Return the file descriptor of write end
         
     }
 }
@@ -293,8 +289,8 @@ Assignment: Complete this function.  The code for generating
  ---------------------------------------------------------------*/
 void doPersonA(int persAwfd)
 {
-    dup2(persAwfd, 1); // Change the stdout to the write end of the pipe.
-    close(persAwfd); // Close the duplicate.
+    dup2(persAwfd, 1); // Duplicate pipe with end at specified location
+    close(persAwfd); // Close original end.
     
     int i;
     
